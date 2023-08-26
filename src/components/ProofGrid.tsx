@@ -7,16 +7,19 @@ import {
   GridRowsProp,
   GridColDef,
 } from '@mui/x-data-grid';
-import {
-  randomCreatedDate,
-  randomTraderName,
-  randomUpdatedDate,
-} from '@mui/x-data-grid-generator';
 import Button from '@mui/material/Button';
+import styles from './ProofGrid.module.css'
+import 'mathlive';
+
+export function MathFieldWrapper() {
+  return (
+    <math-field class={styles.mathField}>f(x) = 5</math-field>
+  );
+}
 
 const columns: GridColDef[] = [
-  { field: 'id', headerName: '#', width: 80, editable: true },
-  { field: 'statement', headerName: 'Statement', type: 'string', width: 350, editable: true },
+  { field: 'id', headerName: '#', width: 80 },
+  { field: 'statement', headerName: 'Statement', width: 350, renderCell: () => <MathFieldWrapper className={styles.field} /> },
   { field: 'reason', headerName: 'Reason', type: 'string', width: 350, editable: true },
 ];
 
@@ -102,8 +105,8 @@ export default function ProofGrid() {
   return (
     <div style={{ width: '80%', margin: 'auto', marginTop: '5vh', marginBottom: '5vh' }}>
       <Button size="small" onClick={handleAddRow}>
-          Add a row
-        </Button>
+        Add a row
+      </Button>
       <DataGrid
         rows={rows}
         columns={columns}
