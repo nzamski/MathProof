@@ -1,4 +1,4 @@
-import * as React from 'react';
+import * as React from "react";
 import {
   DataGrid,
   GridCellModes,
@@ -6,31 +6,62 @@ import {
   GridCellParams,
   GridRowsProp,
   GridColDef,
-} from '@mui/x-data-grid';
-import Button from '@mui/material/Button';
-import styles from './ProofGrid.module.css'
-import 'mathlive';
+  GridActionsCellItem,
+  GridRowId,
+  GridToolbarContainer,
+  GridRenderCellParams,
+} from "@mui/x-data-grid";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import AddIcon from "@mui/icons-material/Add";
+import DeleteIcon from "@mui/icons-material/DeleteOutlined";
+import styles from "./ProofGrid.module.css";
+import "mathlive";
+import { randomId } from "@mui/x-data-grid-generator";
 
-export function MathFieldWrapper() {
+export function MathFieldWrapper({ initialValue, onValueChange }) {
+  const [value, setValue] = React.useState(initialValue);
+
   return (
-    <math-field class={styles.mathField}>f(x) = 5</math-field>
+    <math-field
+      class={styles.mathField}
+      onInput={(evt) => {
+        setValue(evt.target.value);
+        onValueChange(evt.target.value);
+      }}
+    >
+      {value}
+    </math-field>
   );
 }
 
-const columns: GridColDef[] = [
-  { field: 'id', headerName: '#', width: 80 },
-  { field: 'statement', headerName: 'Statement', width: 350, renderCell: () => <MathFieldWrapper className={styles.field} /> },
-  { field: 'reason', headerName: 'Reason', type: 'string', width: 350, editable: true },
-];
+interface EditToolbarProps {
+  setRows: (newRows: (oldRows: GridRowsProp) => GridRowsProp) => void;
+}
 
-let idCounter = 3;
-const createBlankRow = () => {
-  idCounter += 1;
-  return { id: idCounter, statement: '', reason: '' };
-};
+function EditToolbar(props: EditToolbarProps) {
+  const { setRows } = props;
+
+  const handleClick = () => {
+    const id = randomId();
+    setRows((oldRows) => [
+      ...oldRows,
+      { id, statement: "", reason: "", isNew: true },
+    ]);
+  };
+
+  return (
+    <GridToolbarContainer>
+      <Button color="primary" startIcon={<AddIcon />} onClick={handleClick}>
+        Add record
+      </Button>
+    </GridToolbarContainer>
+  );
+}
 
 export default function ProofGrid() {
-  const [cellModesModel, setCellModesModel] = React.useState<GridCellModesModel>({});
+  const [cellModesModel, setCellModesModel] =
+    React.useState<GridCellModesModel>({});
 
   const handleCellClick = React.useCallback(
     (params: GridCellParams, event: React.MouseEvent) => {
@@ -54,66 +85,142 @@ export default function ProofGrid() {
                   ...acc2,
                   [field]: { mode: GridCellModes.View },
                 }),
-                {},
+                {}
               ),
             }),
-            {},
+            {}
           ),
           [params.id]: {
             // Revert the mode of other cells in the same row
             ...Object.keys(prevModel[params.id] || {}).reduce(
-              (acc, field) => ({ ...acc, [field]: { mode: GridCellModes.View } }),
-              {},
+              (acc, field) => ({
+                ...acc,
+                [field]: { mode: GridCellModes.View },
+              }),
+              {}
             ),
             [params.field]: { mode: GridCellModes.Edit },
           },
         };
       });
     },
-    [],
+    []
   );
 
   const handleCellModesModelChange = React.useCallback(
     (newModel: GridCellModesModel) => {
       setCellModesModel(newModel);
     },
-    [],
+    []
   );
 
   const [rows, setRows] = React.useState(() => [
     {
       id: 1,
-      statement: 'AC = BC',
-      reason: 'Pythagoras is a genius!',
+      statement: "AC=BC",
+      reason: "Pythagoras is a genius!",
     },
     {
       id: 2,
-      statement: '6x = 15',
-      reason: 'I am very clever!',
+      statement: "f\\left(x\\right)=x^2-6x+2",
+      reason: "I am very clever!",
     },
     {
       id: 3,
-      statement: 'ABCD is a square',
-      reason: 'Well, it is obvious...',
+      statement: "x=42",
+      reason: "Well, it is obvious...",
     },
   ]);
 
-  const handleAddRow = () => {
-    setRows(prevRows => [...prevRows, createBlankRow()]);
+  const columns: GridColDef[] = [
+    { field: "id", headerName: "#", width: 80 },
+    {
+      field: "statement",
+      headerName: "Statement",
+      width: 350,
+      renderCell: (params: GridRenderCellParams) => {
+        const handleValueChange = (newStatement) => {
+          setRows((oldRows) => {
+            oldRows.find((row) => row.id === params.row.id).statement =
+              newStatement;
+            return oldRows;
+          });
+        };
+
+        return (
+          <MathFieldWrapper
+            className={styles.field}
+            initialValue={params.value}
+            onValueChange={handleValueChange}
+          />
+        );
+      },
+    },
+    {
+      field: "reason",
+      headerName: "Reason",
+      type: "string",
+      width: 350,
+      editable: true,
+    },
+    {
+      field: "actions",
+      headerName: "Actions",
+      type: "actions",
+      width: 100,
+      cellClassName: "actions",
+      getActions: ({ id }) => {
+        return [
+          <GridActionsCellItem
+            icon={<DeleteIcon />}
+            label="Delete"
+            onClick={handleDeleteClick(id)}
+            color="inherit"
+          />,
+        ];
+      },
+    },
+  ];
+
+  const handleDeleteClick = (id: GridRowId) => () => {
+    setRows(rows.filter((row) => row.id !== id));
   };
 
   return (
-    <div style={{ width: '80%', margin: 'auto', marginTop: '5vh', marginBottom: '5vh' }}>
-      <Button size="small" onClick={handleAddRow}>
-        Add a row
-      </Button>
-      <DataGrid
-        rows={rows}
-        columns={columns}
-        cellModesModel={cellModesModel}
-        onCellModesModelChange={handleCellModesModelChange}
-        onCellClick={handleCellClick}
-      />
+    <div
+      style={{
+        width: "80%",
+        margin: "auto",
+        marginTop: "5vh",
+        marginBottom: "5vh",
+      }}
+    >
+      <Box
+        sx={{
+          height: 500,
+          width: "100%",
+          "& .actions": {
+            color: "text.secondary",
+          },
+          "& .textPrimary": {
+            color: "text.primary",
+          },
+        }}
+      >
+        <DataGrid
+          rows={rows}
+          columns={columns}
+          cellModesModel={cellModesModel}
+          onCellModesModelChange={handleCellModesModelChange}
+          onCellClick={handleCellClick}
+          slots={{
+            toolbar: EditToolbar,
+          }}
+          slotProps={{
+            toolbar: { setRows },
+          }}
+        />
+      </Box>
     </div>
   );
 }
